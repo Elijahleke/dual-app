@@ -5,7 +5,7 @@
     name: node_app
     source: build
     build:
-      path: /home/centos/dual-app/node_app
+      path: /home/fedora/dual-app/node_app
   become: true
 
 - name: Run Node container

@@ -5,7 +5,7 @@
     name: flask_app
     source: build
     build:
-      path: /home/centos/dual-app/flask_app
+      path: /home/fedora/dual-app/flask_app
   become: true
 
 - name: Run Flask container
