@@ -1,0 +1,13 @@
+---
+- name: Setup and Deploy Dual App to Shared Host
+  hosts: appserver
+  become: yes
+  vars:
+    db_name: sharedappdb
+    db_user: devops
+    db_pass: admin123
+
+  roles:
+    - postgresql
+    - flask_app
+    - node_app
