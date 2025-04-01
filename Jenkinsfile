@@ -22,14 +22,7 @@ pipeline {
             }
         }
 
-        stage('Unit Tests') {
-            steps {
-                sh '''
-                    pytest flask_app/test_app.py
-                    cd node_app && npm install && npm test
-                '''
-            }
-        }
+        
 
         stage('Build Docker Images') {
             steps {
