@@ -22,8 +22,6 @@ pipeline {
             }
         }
 
-        
-
         stage('Build Docker Images') {
             steps {
                 sh '''
@@ -40,7 +38,8 @@ pipeline {
                     tar -czf node_app-${VERSION}.tar.gz node_app/
                 '''
 
-                withCredentials([usernamePassword(credentialsId: 'nexus-creds', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                // ✅ Updated credential ID to "Nexus"
+                withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh '''
                         curl -u $NEXUS_USER:$NEXUS_PASS --upload-file flask_app-${VERSION}.tar.gz ${NEXUS_REPO}/flask_app-${VERSION}.tar.gz
                         curl -u $NEXUS_USER:$NEXUS_PASS --upload-file node_app-${VERSION}.tar.gz ${NEXUS_REPO}/node_app-${VERSION}.tar.gz
@@ -69,17 +68,11 @@ pipeline {
             mail to: 'elijahleked@gmail.com',
                  subject: "✅ Jenkins Build Successful - Dual App",
                  body: "Your Dual App Build & Deploy succeeded at ${VERSION}!"
-
-            // Optional: Slack
-            // slackSend(channel: '#devops', message: "✅ SUCCESS: Dual App Build ${VERSION}")
         }
         failure {
             mail to: 'elijahleked@gmail.com',
                  subject: "❌ Jenkins Build Failed - Dual App",
                  body: "Your Dual App Build & Deploy failed. Please check Jenkins logs."
-
-            // Optional: Slack
-            // slackSend(channel: '#devops', message: "❌ FAILURE: Dual App Build ${VERSION}")
         }
     }
 }
