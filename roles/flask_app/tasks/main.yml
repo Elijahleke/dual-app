@@ -1,2 +1,21 @@
 ---
 # tasks file for roles/flask_app
+- name: Pull Flask image
+  docker_image:
+    name: flask_app
+    source: build
+    build:
+      path: /home/centos/dual-app/flask_app
+  become: true
+
+- name: Run Flask container
+  docker_container:
+    name: flask_app
+    image: flask_app
+    ports:
+      - "5000:5000"
+    env:
+      DB_HOST: localhost
+      DB_NAME: sharedappdb
+      DB_USER: devops
+      DB_PASS: admin123

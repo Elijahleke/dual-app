@@ -1,2 +1,27 @@
 ---
 # tasks file for roles/postgresql
+- name: Install PostgreSQL
+  yum:
+    name: postgresql-server
+    state: present
+  become: yes
+
+- name: Initialize DB
+  shell: postgresql-setup initdb
+  become: yes
+
+- name: Start PostgreSQL
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Set up schema
+  become_user: postgres
+  postgresql_db:
+    name: sharedappdb
+
+- name: Load schema
+  become_user: postgres
+  command: psql -d sharedappdb -f /tmp/init.sql

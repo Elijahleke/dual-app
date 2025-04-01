@@ -1,2 +1,16 @@
 ---
 # tasks file for roles/node_app
+- name: Pull Node image
+  docker_image:
+    name: node_app
+    source: build
+    build:
+      path: /home/centos/dual-app/node_app
+  become: true
+
+- name: Run Node container
+  docker_container:
+    name: node_app
+    image: node_app
+    ports:
+      - "3000:3000"
