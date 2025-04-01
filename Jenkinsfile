@@ -7,10 +7,6 @@ pipeline {
         NEXUS_REPO = "http://172.31.26.135:8081/repository/dual-app-artifacts"
     }
 
-    tools {
-        sonarQubeScanner 'SonarQube Scanner'
-    }
-
     stages {
         stage('Clone Repo') {
             steps {
