@@ -18,6 +18,7 @@
   become: yes
 
 - name: Create the database 'sharedappdb' if it doesn't exist
+  become: yes
   become_user: postgres
   postgresql_db:
     name: sharedappdb
