@@ -1,7 +1,5 @@
----
-# tasks file for roles/postgresql
 - name: Install PostgreSQL
-  yum:
+  dnf:
     name: postgresql-server
     state: present
   become: yes
@@ -21,6 +19,12 @@
   become_user: postgres
   postgresql_db:
     name: sharedappdb
+
+- name: Copy DB schema to remote
+  copy:
+    src: shared_db/init.sql
+    dest: /tmp/init.sql
+  become: yes
 
 - name: Load schema
   become_user: postgres
