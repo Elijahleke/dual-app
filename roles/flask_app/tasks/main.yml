@@ -1,11 +1,12 @@
 ---
 # tasks file for roles/flask_app
-
-- name: Download Flask image artifact from Nexus
+- name: Download Flask image artifact from Nexus (public IP)
   get_url:
-    url: "http://172.31.26.135:8081/repository/dual-app-artifacts/flask_app-{{ version }}.tar.gz"
+    url: "http://34.227.49.233:8081/repository/dual-app-artifacts/flask_app-{{ version }}.tar.gz"
     dest: "/tmp/flask_app-{{ version }}.tar.gz"
     mode: '0644'
+    url_username: "{{ nexus_user }}"
+    url_password: "{{ nexus_pass }}"
 
 - name: Extract Flask image archive
   unarchive:
