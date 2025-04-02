@@ -1,25 +1,29 @@
 ---
 # tasks file for roles/node_app
-- name: Pull Node image
-  community.docker.docker_image:
-    name: node_app
-    source: build
-    build:
-      path: /home/fedora/dual-app/node_app
-  environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
-  become: yes
-  become_user: fedora
+- name: Download Node image artifact from Nexus
+  get_url:
+    url: "http://172.31.26.135:8081/repository/dual-app-artifacts/node_app-{{ version }}.tar.gz"
+    dest: "/tmp/node_app-{{ version }}.tar.gz"
+    mode: '0644'
+
+- name: Extract Node image archive
+  unarchive:
+    src: "/tmp/node_app-{{ version }}.tar.gz"
+    dest: "/tmp/node_app"
+    remote_src: yes
+
+- name: Load Node image into Docker
+  command: docker build -t node_app:{{ version }} .
+  args:
+    chdir: /tmp/node_app
 
 - name: Run Node container
   community.docker.docker_container:
     name: node_app
-    image: node_app
+    image: node_app:{{ version }}
     state: started
     restart_policy: always
     published_ports:
       - "3000:3000"
-  environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
   become: yes
   become_user: fedora

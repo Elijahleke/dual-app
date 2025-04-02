@@ -1,20 +1,27 @@
 ---
 # tasks file for roles/flask_app
-- name: Pull Flask image
-  community.docker.docker_image:
-    name: flask_app
-    source: build
-    build:
-      path: /home/fedora/dual-app/flask_app
-  environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
-  become: yes
-  become_user: fedora
+
+- name: Download Flask image artifact from Nexus
+  get_url:
+    url: "http://172.31.26.135:8081/repository/dual-app-artifacts/flask_app-{{ version }}.tar.gz"
+    dest: "/tmp/flask_app-{{ version }}.tar.gz"
+    mode: '0644'
+
+- name: Extract Flask image archive
+  unarchive:
+    src: "/tmp/flask_app-{{ version }}.tar.gz"
+    dest: "/tmp/flask_app"
+    remote_src: yes
+
+- name: Load Flask image into Docker
+  command: docker build -t flask_app:{{ version }} .
+  args:
+    chdir: /tmp/flask_app
 
 - name: Run Flask container
   community.docker.docker_container:
     name: flask_app
-    image: flask_app
+    image: flask_app:{{ version }}
     state: started
     restart_policy: always
     published_ports:
@@ -24,7 +31,5 @@
       DB_NAME: sharedappdb
       DB_USER: devops
       DB_PASS: admin123
-  environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
   become: yes
   become_user: fedora
