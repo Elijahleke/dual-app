@@ -38,7 +38,6 @@ pipeline {
                     tar -czf node_app-${VERSION}.tar.gz node_app/
                 '''
 
-                // ✅ Updated credential ID to "Nexus"
                 withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh '''
                         curl -u $NEXUS_USER:$NEXUS_PASS --upload-file flask_app-${VERSION}.tar.gz ${NEXUS_REPO}/flask_app-${VERSION}.tar.gz
@@ -52,7 +51,13 @@ pipeline {
 
         stage('Deploy via Ansible') {
             steps {
-                sh 'ansible-playbook -i inventory.ini play.yml'
+                withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    sh '''
+                        export NEXUS_USER=$NEXUS_USER
+                        export NEXUS_PASS=$NEXUS_PASS
+                        ansible-playbook -i inventory.ini play.yml --extra-vars "version=${VERSION}"
+                    '''
+                }
             }
         }
 
@@ -65,12 +70,12 @@ pipeline {
 
     post {
         success {
-            mail to: 'elijahleked@gmail.com boyodebby@gmail.com, derachukwudi08@gmail.com',
+            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
                  subject: "✅ Jenkins Build Successful - Dual App",
                  body: "Your Dual App Build & Deploy succeeded at ${VERSION}!"
         }
         failure {
-            mail to: 'elijahleked@gmail.com boyodebby@gmail.com, derachukwudi08@gmail.com',
+            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
                  subject: "❌ Jenkins Build Failed - Dual App",
                  body: "Your Dual App Build & Deploy failed. Please check Jenkins logs."
         }
