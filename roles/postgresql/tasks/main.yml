@@ -1,24 +1,32 @@
-- name: Ensure postgresql-setup is present (Fedora/RHEL only)
+- name: Ensure PostgreSQL is installed
   package:
     name: postgresql-server
     state: present
   become: yes
 
-- name: Initialize DB
-  shell: postgresql-setup initdb
+- name: Check if PostgreSQL is initialized
+  stat:
+    path: /var/lib/pgsql/data/PG_VERSION
+  register: pgdata_initialized
   become: yes
 
-- name: Start PostgreSQL
+- name: Initialize PostgreSQL database if not already initialized
+  command: postgresql-setup --initdb
+  become: yes
+  when: not pgdata_initialized.stat.exists
+
+- name: Start and enable PostgreSQL service
   service:
     name: postgresql
     state: started
     enabled: yes
   become: yes
 
-- name: Set up schema
+- name: Create the database 'sharedappdb' if it doesn't exist
   become_user: postgres
   postgresql_db:
     name: sharedappdb
+    state: present
 
 - name: Copy DB schema to remote
   copy:
@@ -26,6 +34,6 @@
     dest: /tmp/init.sql
   become: yes
 
-- name: Load schema
+- name: Load schema into sharedappdb
   become_user: postgres
   command: psql -d sharedappdb -f /tmp/init.sql
