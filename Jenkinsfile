@@ -2,23 +2,29 @@ pipeline {
     agent { label 'ubuntu-agent' }
 
     environment {
-        GIT_REPO = 'https://github.com/Elijahleke/dual-app.git'
-        VERSION = "v1.0.${BUILD_NUMBER}"
-        NEXUS_REPO = "http://172.31.26.135:8081/repository/dual-app-artifacts"
+        GIT_REPO     = 'https://github.com/Elijahleke/dual-app.git'
+        VERSION      = "v1.0.${BUILD_NUMBER}"
+        NEXUS_REPO   = "http://172.31.26.135:8081/repository/dual-app-artifacts"
         RETENTION_DAYS = "7"
     }
 
     stages {
-        stage('Clone Repo') {
+
+        stage('Checkout Code') {
             steps {
                 git branch: 'dev', url: "${GIT_REPO}"
             }
         }
 
-        stage('SonarQube Analysis') {
+        stage('Static Code Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh 'sonar-scanner -Dsonar.projectKey=dual-app -Dsonar.sources=. -Dsonar.sourceEncoding=UTF-8'
+                    sh '''
+                        sonar-scanner \
+                          -Dsonar.projectKey=dual-app \
+                          -Dsonar.sources=. \
+                          -Dsonar.sourceEncoding=UTF-8
+                    '''
                 }
             }
         }
@@ -32,7 +38,7 @@ pipeline {
             }
         }
 
-        stage('Archive & Push to Nexus') {
+        stage('Package & Push Artifacts') {
             steps {
                 sh '''
                     tar -czf flask_app-${VERSION}.tar.gz flask_app/
@@ -50,17 +56,54 @@ pipeline {
             }
         }
 
-        stage('Deploy via Ansible') {
+        stage('Deploy with Ansible') {
             steps {
-                // Create an Ansible variable file with the version
-                sh "echo 'app_version: ${VERSION}' > version_vars.yml"
-                
-                // Fix the package module issue by modifying play.yml
                 sh '''
-                    # Replace 'package' with 'yum' for better compatibility
-                    sed -i 's/package:/yum:/g' play.yml
-                    
-                    # Run the playbook with extra vars
+                    echo "app_version: ${VERSION}" > version_vars.yml
+                    cp play.yml play.yml.original
+
+                    cat > play.yml << 'EOF'
+---
+- name: Setup and Deploy Dual App to Shared Host
+  hosts: app
+  become: yes
+
+  pre_tasks:
+    - name: Install dependencies
+      ansible.builtin.dnf:
+        name:
+          - python3-pip
+          - python3-docker
+          - docker
+        state: present
+      when: ansible_distribution == 'Fedora'
+
+    - name: Install Docker SDK for Python
+      ansible.builtin.pip:
+        name: docker
+        state: present
+
+    - name: Ensure Docker is running
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add SSH user to docker group
+      ansible.builtin.user:
+        name: "{{ ansible_ssh_user }}"
+        groups: docker
+        append: yes
+
+    - name: Reset SSH connection to apply group changes
+      meta: reset_connection
+
+  roles:
+    - postgresql
+    - flask_app
+    - node_app
+EOF
+
                     ansible-playbook -i inventory.ini play.yml --extra-vars "@version_vars.yml"
                 '''
             }
@@ -68,17 +111,11 @@ pipeline {
 
         stage('Cleanup Old Artifacts') {
             steps {
-                // Local cleanup
-                sh 'find ./ -name "*.tar.gz" -mtime +${RETENTION_DAYS} -delete'
-                
-                // Docker cleanup
                 sh '''
-                    # Remove old Docker images (keeping the last 3 versions)
-                    docker image prune -a --filter "until=${RETENTION_DAYS}d" --force
-                    
-                    # List images to keep only the 3 most recent per app
+                    find ./ -name "*.tar.gz" -mtime +${RETENTION_DAYS} -delete || true
+
                     for app in flask_app node_app; do
-                        echo "Cleaning up old $app images..."
+                        docker image prune -a --filter "until=${RETENTION_DAYS}d" --force || true
                         docker images $app --format "{{.Repository}}:{{.Tag}}" | sort -r | tail -n +4 | xargs -r docker rmi || true
                     done
                 '''
@@ -88,18 +125,22 @@ pipeline {
 
     post {
         success {
-            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com',
+            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
                  subject: "✅ Jenkins Build Successful - Dual App",
                  body: "Your Dual App Build & Deploy succeeded at ${VERSION}!"
         }
+
         failure {
-            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com',
+            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
                  subject: "❌ Jenkins Build Failed - Dual App",
                  body: "Your Dual App Build & Deploy failed. Please check Jenkins logs."
         }
+
         always {
-            // Clean workspace using deleteDir instead of cleanWs
             deleteDir()
+
+            // Restore original playbook
+            sh 'test -f play.yml.original && mv play.yml.original play.yml || true'
         }
     }
 }
