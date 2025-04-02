@@ -2,40 +2,24 @@
 - name: Setup and Deploy Dual App to Shared Host
   hosts: app
   become: yes
-  
+
   pre_tasks:
-    - name: Install essential packages
-      package:
-        name:
-          - python3-pip
-          - python3-docker
-        state: present
-        
-    - name: Install Docker SDK for Python
-      pip:
-        name: docker
-        state: present
-        
-    - name: Install Docker
-      package:
-        name: docker
-        state: present
-        
-    - name: Start Docker service
+    - name: Ensure Docker service is running
       service:
         name: docker
         state: started
         enabled: yes
-        
-    - name: Add user to docker group
+
+    - name: Add SSH user to Docker group (non-fatal if already added)
       user:
         name: "{{ ansible_ssh_user }}"
         groups: docker
         append: yes
-        
-    - name: Reset connection to apply docker group changes
+      ignore_errors: true
+
+    - name: Reset SSH connection to apply docker group changes
       meta: reset_connection
-      
+
   roles:
     - postgresql
     - flask_app
