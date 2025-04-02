@@ -27,9 +27,15 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
+                // Use buildx for Docker builds if available
                 sh '''
-                    docker build -t flask_app:${VERSION} flask_app
-                    docker build -t node_app:${VERSION} node_app
+                    if command -v docker buildx &> /dev/null; then
+                        docker buildx build --load -t flask_app:${VERSION} flask_app
+                        docker buildx build --load -t node_app:${VERSION} node_app
+                    else
+                        docker build -t flask_app:${VERSION} flask_app
+                        docker build -t node_app:${VERSION} node_app
+                    fi
                 '''
             }
         }
@@ -52,58 +58,66 @@ pipeline {
             }
         }
 
-        stage('Manual Deployment') {
+        stage('Deploy to Target') {
             steps {
-                script {
-                    // Create a deployment script
+                // Use SSH credentials - you need to add these to Jenkins
+                withCredentials([sshUserPrivateKey(credentialsId: 'target-server-ssh', keyFileVariable: 'SSH_KEY')]) {
                     sh '''
-                    cat > deploy.sh << 'EOF'
+                        # Create deployment script
+                        cat > deploy.sh << 'EOF'
 #!/bin/bash
 set -e
 
-# Install required packages if not present
-echo "Installing required packages..."
-sudo dnf install -y docker python3-pip python3-docker || sudo yum install -y docker python3-pip python3-docker || true
-
-# Make sure Docker service is running
-echo "Starting Docker service..."
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Add user to docker group
-echo "Adding user to docker group..."
-sudo usermod -aG docker $USER
-
-# Use sudo for Docker commands until permissions take effect
-echo "Pulling application code..."
+# Setup directories
 mkdir -p ~/dual-app/flask_app
 mkdir -p ~/dual-app/node_app
 
-# Deploy both applications
-echo "Deploying applications..."
-cd ~/dual-app/flask_app
-sudo docker build -t flask_app:latest .
-sudo docker run -d --name flask_app -p 5000:5000 --restart always flask_app:latest || sudo docker restart flask_app
+# Install Docker if not present using sudo
+if ! command -v docker &> /dev/null; then
+    echo "Installing Docker..."
+    sudo dnf install -y dnf-plugins-core
+    sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    sudo usermod -aG docker $USER
+    echo "Docker installed successfully"
+fi
 
+# Build and run Flask app
+cd ~/dual-app/flask_app
+echo "Building Flask app..."
+sudo docker build -t flask_app:latest .
+echo "Running Flask app..."
+sudo docker stop flask_app 2>/dev/null || true
+sudo docker rm flask_app 2>/dev/null || true
+sudo docker run -d --name flask_app -p 5000:5000 --restart always flask_app:latest
+
+# Build and run Node app
 cd ~/dual-app/node_app
+echo "Building Node app..."
 sudo docker build -t node_app:latest .
-sudo docker run -d --name node_app -p 3000:3000 --restart always node_app:latest || sudo docker restart node_app
+echo "Running Node app..."
+sudo docker stop node_app 2>/dev/null || true
+sudo docker rm node_app 2>/dev/null || true
+sudo docker run -d --name node_app -p 3000:3000 --restart always node_app:latest
 
 echo "Deployment completed successfully!"
 EOF
-                    chmod +x deploy.sh
-                    '''
-                    
-                    // Copy application files to target server
-                    sh '''
-                    scp -r flask_app/* ${SSH_USER}@${TARGET_SERVER}:~/dual-app/flask_app/
-                    scp -r node_app/* ${SSH_USER}@${TARGET_SERVER}:~/dual-app/node_app/
-                    scp deploy.sh ${SSH_USER}@${TARGET_SERVER}:~/deploy.sh
-                    '''
-                    
-                    // Execute deployment script on target server
-                    sh '''
-                    ssh ${SSH_USER}@${TARGET_SERVER} "bash ~/deploy.sh"
+
+                        # Set up SSH options with the key
+                        SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no"
+                        
+                        # Create remote directories
+                        ssh $SSH_OPTS ${SSH_USER}@${TARGET_SERVER} "mkdir -p ~/dual-app/flask_app ~/dual-app/node_app"
+                        
+                        # Copy application files
+                        scp $SSH_OPTS -r flask_app/* ${SSH_USER}@${TARGET_SERVER}:~/dual-app/flask_app/
+                        scp $SSH_OPTS -r node_app/* ${SSH_USER}@${TARGET_SERVER}:~/dual-app/node_app/
+                        
+                        # Copy and execute deployment script
+                        scp $SSH_OPTS deploy.sh ${SSH_USER}@${TARGET_SERVER}:~/deploy.sh
+                        ssh $SSH_OPTS ${SSH_USER}@${TARGET_SERVER} "chmod +x ~/deploy.sh && ~/deploy.sh"
                     '''
                 }
             }
@@ -125,6 +139,14 @@ EOF
                         docker images $app --format "{{.Repository}}:{{.Tag}}" | sort -r | tail -n +4 | xargs -r docker rmi || true
                     done
                 '''
+                
+                // Remote cleanup - optional
+                withCredentials([sshUserPrivateKey(credentialsId: 'target-server-ssh', keyFileVariable: 'SSH_KEY')]) {
+                    sh '''
+                        SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no"
+                        ssh $SSH_OPTS ${SSH_USER}@${TARGET_SERVER} "docker image prune -a --filter until=${RETENTION_DAYS}d --force || true"
+                    '''
+                }
             }
         }
     }
@@ -141,7 +163,6 @@ EOF
                  body: "Your Dual App Build & Deploy failed. Please check Jenkins logs."
         }
         always {
-            // Clean workspace using deleteDir
             deleteDir()
         }
     }
