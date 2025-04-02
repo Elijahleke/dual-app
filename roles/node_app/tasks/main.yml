@@ -39,6 +39,6 @@
     -p 3000:3000
     node_app:{{ version }}
   args:
-    warn: false
+    chdir: /tmp
   become: yes
   become_user: fedora
