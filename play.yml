@@ -3,6 +3,9 @@
   hosts: app
   become: yes
 
+  vars:
+    version: "v1.0.{{ lookup('env', 'BUILD_NUMBER') | default('latest') }}"
+
   pre_tasks:
     - name: Ensure Docker service is running
       service:
