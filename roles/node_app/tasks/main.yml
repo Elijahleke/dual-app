@@ -37,7 +37,7 @@
     docker run -d --name node_app
     --restart always
     --network host
-    -e DB_HOST=localhost
+    -e DB_HOST=127.0.0.1
     -e DB_NAME=sharedappdb
     -e DB_USER=devops
     -e DB_PASS=admin123
