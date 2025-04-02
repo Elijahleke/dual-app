@@ -1,6 +1,10 @@
----
-# tasks file for roles/flask_app
-- name: Download Flask image artifact from Nexus (public IP)
+- name: Create extract directory for Flask image
+  file:
+    path: "/tmp/flask_app"
+    state: directory
+    mode: '0755'
+
+- name: Download Flask image artifact from Nexus
   get_url:
     url: "http://34.227.49.233:8081/repository/dual-app-artifacts/flask_app-{{ version }}.tar.gz"
     dest: "/tmp/flask_app-{{ version }}.tar.gz"
@@ -14,7 +18,7 @@
     dest: "/tmp/flask_app"
     remote_src: yes
 
-- name: Load Flask image into Docker
+- name: Build Flask image from extracted files
   command: docker build -t flask_app:{{ version }} .
   args:
     chdir: /tmp/flask_app
