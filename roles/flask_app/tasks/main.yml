@@ -36,13 +36,12 @@
   shell: >
     docker run -d --name flask_app
     --restart always
-    -p 5000:5000
+    --network host
     -e DB_HOST=localhost
     -e DB_NAME=sharedappdb
     -e DB_USER=devops
     -e DB_PASS=admin123
     flask_app:{{ version }}
-  args:
-    chdir: /tmp
   become: yes
   become_user: fedora
+

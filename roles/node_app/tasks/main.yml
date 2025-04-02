@@ -36,9 +36,11 @@
   shell: >
     docker run -d --name node_app
     --restart always
-    -p 3000:3000
+    --network host
+    -e DB_HOST=localhost
+    -e DB_NAME=sharedappdb
+    -e DB_USER=devops
+    -e DB_PASS=admin123
     node_app:{{ version }}
-  args:
-    chdir: /tmp
   become: yes
   become_user: fedora
