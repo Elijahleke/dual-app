@@ -1,8 +1,3 @@
-- name: Ensure PostgreSQL is installed
-  package:
-    name: postgresql-server
-    state: present
-  become: yes
 
 - name: Check if PostgreSQL is initialized
   stat:
