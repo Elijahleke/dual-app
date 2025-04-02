@@ -27,15 +27,11 @@ pipeline {
 
         stage('Build Docker Images') {
             steps {
-                // Use buildx for Docker builds if available
+                // Use standard Docker build
                 sh '''
-                    if command -v docker buildx &> /dev/null; then
-                        docker buildx build --load -t flask_app:${VERSION} flask_app
-                        docker buildx build --load -t node_app:${VERSION} node_app
-                    else
-                        docker build -t flask_app:${VERSION} flask_app
-                        docker build -t node_app:${VERSION} node_app
-                    fi
+                    # Using standard Docker build
+                    docker build -t flask_app:${VERSION} flask_app
+                    docker build -t node_app:${VERSION} node_app
                 '''
             }
         }
@@ -77,7 +73,7 @@ if ! command -v docker &> /dev/null; then
     echo "Installing Docker..."
     sudo dnf install -y dnf-plugins-core
     sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-    sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    sudo dnf install -y docker-ce docker-ce-cli containerd.io
     sudo systemctl start docker
     sudo systemctl enable docker
     sudo usermod -aG docker $USER
@@ -130,8 +126,8 @@ EOF
                 
                 // Docker cleanup
                 sh '''
-                    # Remove old Docker images
-                    docker image prune -a --filter "until=${RETENTION_DAYS}d" --force || true
+                    # Remove dangling images
+                    docker image prune -f || true
                     
                     # List images to keep only the 3 most recent per app
                     for app in flask_app node_app; do
@@ -144,7 +140,7 @@ EOF
                 withCredentials([sshUserPrivateKey(credentialsId: 'target-server-ssh', keyFileVariable: 'SSH_KEY')]) {
                     sh '''
                         SSH_OPTS="-i $SSH_KEY -o StrictHostKeyChecking=no"
-                        ssh $SSH_OPTS ${SSH_USER}@${TARGET_SERVER} "docker image prune -a --filter until=${RETENTION_DAYS}d --force || true"
+                        ssh $SSH_OPTS ${SSH_USER}@${TARGET_SERVER} "docker image prune -f || true"
                     '''
                 }
             }
@@ -153,12 +149,12 @@ EOF
 
     post {
         success {
-            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com',
+            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
                  subject: "✅ Jenkins Build Successful - Dual App",
                  body: "Your Dual App Build & Deploy succeeded at ${VERSION}!"
         }
         failure {
-            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com',
+            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
                  subject: "❌ Jenkins Build Failed - Dual App",
                  body: "Your Dual App Build & Deploy failed. Please check Jenkins logs."
         }
