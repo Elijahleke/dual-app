@@ -2,29 +2,25 @@ pipeline {
     agent { label 'ubuntu-agent' }
 
     environment {
-        GIT_REPO     = 'https://github.com/Elijahleke/dual-app.git'
-        VERSION      = "v1.0.${BUILD_NUMBER}"
-        NEXUS_REPO   = "http://172.31.26.135:8081/repository/dual-app-artifacts"
+        GIT_REPO = 'https://github.com/Elijahleke/dual-app.git'
+        VERSION = "v1.0.${BUILD_NUMBER}"
+        NEXUS_REPO = "http://172.31.26.135:8081/repository/dual-app-artifacts"
         RETENTION_DAYS = "7"
+        TARGET_SERVER = "172.31.90.68"
+        SSH_USER = "fedora"
     }
 
     stages {
-
-        stage('Checkout Code') {
+        stage('Clone Repo') {
             steps {
                 git branch: 'dev', url: "${GIT_REPO}"
             }
         }
 
-        stage('Static Code Analysis') {
+        stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    sh '''
-                        sonar-scanner \
-                          -Dsonar.projectKey=dual-app \
-                          -Dsonar.sources=. \
-                          -Dsonar.sourceEncoding=UTF-8
-                    '''
+                    sh 'sonar-scanner -Dsonar.projectKey=dual-app -Dsonar.sources=. -Dsonar.sourceEncoding=UTF-8'
                 }
             }
         }
@@ -38,7 +34,7 @@ pipeline {
             }
         }
 
-        stage('Package & Push Artifacts') {
+        stage('Archive & Push to Nexus') {
             steps {
                 sh '''
                     tar -czf flask_app-${VERSION}.tar.gz flask_app/
@@ -56,66 +52,76 @@ pipeline {
             }
         }
 
-        stage('Deploy with Ansible') {
+        stage('Manual Deployment') {
             steps {
-                sh '''
-                    echo "app_version: ${VERSION}" > version_vars.yml
-                    cp play.yml play.yml.original
+                script {
+                    // Create a deployment script
+                    sh '''
+                    cat > deploy.sh << 'EOF'
+#!/bin/bash
+set -e
 
-                    cat > play.yml << 'EOF'
----
-- name: Setup and Deploy Dual App to Shared Host
-  hosts: app
-  become: yes
+# Install required packages if not present
+echo "Installing required packages..."
+sudo dnf install -y docker python3-pip python3-docker || sudo yum install -y docker python3-pip python3-docker || true
 
-  pre_tasks:
-    - name: Install dependencies
-      ansible.builtin.dnf:
-        name:
-          - python3-pip
-          - python3-docker
-          - docker
-        state: present
-      when: ansible_distribution == 'Fedora'
+# Make sure Docker service is running
+echo "Starting Docker service..."
+sudo systemctl start docker
+sudo systemctl enable docker
 
-    - name: Install Docker SDK for Python
-      ansible.builtin.pip:
-        name: docker
-        state: present
+# Add user to docker group
+echo "Adding user to docker group..."
+sudo usermod -aG docker $USER
 
-    - name: Ensure Docker is running
-      ansible.builtin.service:
-        name: docker
-        state: started
-        enabled: yes
+# Use sudo for Docker commands until permissions take effect
+echo "Pulling application code..."
+mkdir -p ~/dual-app/flask_app
+mkdir -p ~/dual-app/node_app
 
-    - name: Add SSH user to docker group
-      ansible.builtin.user:
-        name: "{{ ansible_ssh_user }}"
-        groups: docker
-        append: yes
+# Deploy both applications
+echo "Deploying applications..."
+cd ~/dual-app/flask_app
+sudo docker build -t flask_app:latest .
+sudo docker run -d --name flask_app -p 5000:5000 --restart always flask_app:latest || sudo docker restart flask_app
 
-    - name: Reset SSH connection to apply group changes
-      meta: reset_connection
+cd ~/dual-app/node_app
+sudo docker build -t node_app:latest .
+sudo docker run -d --name node_app -p 3000:3000 --restart always node_app:latest || sudo docker restart node_app
 
-  roles:
-    - postgresql
-    - flask_app
-    - node_app
+echo "Deployment completed successfully!"
 EOF
-
-                    ansible-playbook -i inventory.ini play.yml --extra-vars "@version_vars.yml"
-                '''
+                    chmod +x deploy.sh
+                    '''
+                    
+                    // Copy application files to target server
+                    sh '''
+                    scp -r flask_app/* ${SSH_USER}@${TARGET_SERVER}:~/dual-app/flask_app/
+                    scp -r node_app/* ${SSH_USER}@${TARGET_SERVER}:~/dual-app/node_app/
+                    scp deploy.sh ${SSH_USER}@${TARGET_SERVER}:~/deploy.sh
+                    '''
+                    
+                    // Execute deployment script on target server
+                    sh '''
+                    ssh ${SSH_USER}@${TARGET_SERVER} "bash ~/deploy.sh"
+                    '''
+                }
             }
         }
 
         stage('Cleanup Old Artifacts') {
             steps {
+                // Local cleanup
+                sh 'find ./ -name "*.tar.gz" -mtime +${RETENTION_DAYS} -delete || true'
+                
+                // Docker cleanup
                 sh '''
-                    find ./ -name "*.tar.gz" -mtime +${RETENTION_DAYS} -delete || true
-
+                    # Remove old Docker images
+                    docker image prune -a --filter "until=${RETENTION_DAYS}d" --force || true
+                    
+                    # List images to keep only the 3 most recent per app
                     for app in flask_app node_app; do
-                        docker image prune -a --filter "until=${RETENTION_DAYS}d" --force || true
+                        echo "Cleaning up old $app images..."
                         docker images $app --format "{{.Repository}}:{{.Tag}}" | sort -r | tail -n +4 | xargs -r docker rmi || true
                     done
                 '''
@@ -125,22 +131,18 @@ EOF
 
     post {
         success {
-            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
+            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com',
                  subject: "✅ Jenkins Build Successful - Dual App",
                  body: "Your Dual App Build & Deploy succeeded at ${VERSION}!"
         }
-
         failure {
-            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
+            mail to: 'elijahleked@gmail.com, boyodebby@gmail.com',
                  subject: "❌ Jenkins Build Failed - Dual App",
                  body: "Your Dual App Build & Deploy failed. Please check Jenkins logs."
         }
-
         always {
+            // Clean workspace using deleteDir
             deleteDir()
-
-            // Restore original playbook
-            sh 'test -f play.yml.original && mv play.yml.original play.yml || true'
         }
     }
 }
