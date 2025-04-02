@@ -33,7 +33,7 @@
   become_user: fedora
 
 - name: Run Node container using Docker CLI
-  command: >
+  shell: >
     docker run -d --name node_app
     --restart always
     -p 3000:3000

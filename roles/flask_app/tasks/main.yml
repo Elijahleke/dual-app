@@ -33,7 +33,7 @@
   become_user: fedora
 
 - name: Run Flask container using Docker CLI
-  command: >
+  shell: >
     docker run -d --name flask_app
     --restart always
     -p 5000:5000
