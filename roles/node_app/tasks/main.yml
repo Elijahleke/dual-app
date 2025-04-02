@@ -34,3 +34,6 @@
       - "3000:3000"
   become: yes
   become_user: fedora
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+

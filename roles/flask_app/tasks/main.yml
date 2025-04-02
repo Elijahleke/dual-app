@@ -39,3 +39,6 @@
       DB_PASS: admin123
   become: yes
   become_user: fedora
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+
