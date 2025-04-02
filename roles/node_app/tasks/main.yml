@@ -23,17 +23,22 @@
   command: docker build -t node_app:{{ version }} .
   args:
     chdir: /tmp/node_app/node_app
-
-- name: Run Node container
-  community.docker.docker_container:
-    name: node_app
-    image: node_app:{{ version }}
-    state: started
-    restart_policy: always
-    published_ports:
-      - "3000:3000"
   become: yes
   become_user: fedora
-  environment:
-    DOCKER_HOST: unix:///var/run/docker.sock
 
+- name: Stop & remove old Node container (if exists)
+  shell: docker rm -f node_app || true
+  ignore_errors: true
+  become: yes
+  become_user: fedora
+
+- name: Run Node container using Docker CLI
+  command: >
+    docker run -d --name node_app
+    --restart always
+    -p 3000:3000
+    node_app:{{ version }}
+  args:
+    warn: false
+  become: yes
+  become_user: fedora
