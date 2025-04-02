@@ -1,8 +1,7 @@
 - name: Install PostgreSQL
-  dnf:
+  ansible.builtin.package:
     name: postgresql-server
     state: present
-  become: yes
 
 - name: Initialize DB
   shell: postgresql-setup initdb
