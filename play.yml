@@ -8,6 +8,9 @@
     nexus_user: "{{ lookup('env', 'NEXUS_USER') }}"
     nexus_pass: "{{ lookup('env', 'NEXUS_PASS') }}"
 
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+
   pre_tasks:
     - name: Ensure Docker service is running
       service:
