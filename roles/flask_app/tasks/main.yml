@@ -6,7 +6,7 @@
     source: build
     build:
       path: /home/fedora/dual-app/flask_app
-    docker_host: unix:///var/run/docker.sock
+    docker_host: "unix://var/run/docker.sock"
   become: true
 
 - name: Run Flask container
@@ -22,5 +22,5 @@
       DB_NAME: sharedappdb
       DB_USER: devops
       DB_PASS: admin123
-    docker_host: unix:///var/run/docker.sock
+    docker_host: "unix://var/run/docker.sock"
   become: true
