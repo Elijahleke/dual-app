@@ -1,21 +1,26 @@
 ---
 # tasks file for roles/flask_app
 - name: Pull Flask image
-  docker_image:
+  community.docker.docker_image:
     name: flask_app
     source: build
     build:
       path: /home/fedora/dual-app/flask_app
+    docker_host: unix:///var/run/docker.sock
   become: true
 
 - name: Run Flask container
-  docker_container:
+  community.docker.docker_container:
     name: flask_app
     image: flask_app
-    ports:
+    state: started
+    restart_policy: always
+    published_ports:
       - "5000:5000"
     env:
       DB_HOST: localhost
       DB_NAME: sharedappdb
       DB_USER: devops
       DB_PASS: admin123
+    docker_host: unix:///var/run/docker.sock
+  become: true
