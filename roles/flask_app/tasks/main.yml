@@ -1,3 +1,4 @@
+---
 - name: Create extract directory for Flask image
   file:
     path: "/tmp/flask_app"
@@ -21,7 +22,7 @@
 - name: Build Flask image from extracted files
   command: docker build -t flask_app:{{ version }} .
   args:
-    chdir: /tmp/flask_app
+    chdir: /tmp/flask_app/flask_app
 
 - name: Run Flask container
   community.docker.docker_container:

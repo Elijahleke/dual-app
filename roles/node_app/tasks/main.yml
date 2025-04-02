@@ -22,7 +22,7 @@
 - name: Build Node image from extracted files
   command: docker build -t node_app:{{ version }} .
   args:
-    chdir: /tmp/node_app
+    chdir: /tmp/node_app/node_app
 
 - name: Run Node container
   community.docker.docker_container:
