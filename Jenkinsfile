@@ -65,12 +65,12 @@ pipeline {
 
     post {
         success {
-            mail to: 'elijahleked@gmail.com',
+            mail to: 'elijahleked@gmail.com boyodebby@gmail.com',
                  subject: "✅ Jenkins Build Successful - Dual App",
                  body: "Your Dual App Build & Deploy succeeded at ${VERSION}!"
         }
         failure {
-            mail to: 'elijahleked@gmail.com',
+            mail to: 'elijahleked@gmail.com boyodebby@gmail.com',
                  subject: "❌ Jenkins Build Failed - Dual App",
                  body: "Your Dual App Build & Deploy failed. Please check Jenkins logs."
         }

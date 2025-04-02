@@ -1,7 +1,8 @@
-- name: Install PostgreSQL
-  ansible.builtin.package:
+- name: Ensure postgresql-setup is present (Fedora/RHEL only)
+  package:
     name: postgresql-server
     state: present
+  become: yes
 
 - name: Initialize DB
   shell: postgresql-setup initdb
