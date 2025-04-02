@@ -52,10 +52,13 @@ pipeline {
 
         stage('Deploy via Ansible') {
             steps {
-                // Pass the version variable to Ansible
+                // Create an Ansible variable file with the version
+                sh "echo 'app_version: ${VERSION}' > version_vars.yml"
+                
+                // Fix the package module issue by modifying play.yml
                 sh '''
-                    # Create an Ansible variable file with the version
-                    echo "app_version: ${VERSION}" > version_vars.yml
+                    # Replace 'package' with 'yum' for better compatibility
+                    sed -i 's/package:/yum:/g' play.yml
                     
                     # Run the playbook with extra vars
                     ansible-playbook -i inventory.ini play.yml --extra-vars "@version_vars.yml"
@@ -68,21 +71,6 @@ pipeline {
                 // Local cleanup
                 sh 'find ./ -name "*.tar.gz" -mtime +${RETENTION_DAYS} -delete'
                 
-                // Nexus cleanup (requires Nexus API access)
-                withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
-                    sh '''
-                        # Get a list of artifacts older than RETENTION_DAYS
-                        # This is a simplified example and may need adjustment for your Nexus API
-                        curl -s -u $NEXUS_USER:$NEXUS_PASS "${NEXUS_REPO}?format=json" | \
-                        jq -r '.items[] | select(.lastModified < (now - (${RETENTION_DAYS} * 86400)) | .path' | \
-                        while read artifact; do
-                            echo "Deleting old artifact: $artifact"
-                            # Uncomment when ready to actually delete
-                            # curl -u $NEXUS_USER:$NEXUS_PASS -X DELETE "${NEXUS_REPO}/$artifact"
-                        done
-                    '''
-                }
-                
                 // Docker cleanup
                 sh '''
                     # Remove old Docker images (keeping the last 3 versions)
@@ -91,7 +79,7 @@ pipeline {
                     # List images to keep only the 3 most recent per app
                     for app in flask_app node_app; do
                         echo "Cleaning up old $app images..."
-                        docker images $app --format "{{.Repository}}:{{.Tag}}" | sort -r | tail -n +4 | xargs -r docker rmi
+                        docker images $app --format "{{.Repository}}:{{.Tag}}" | sort -r | tail -n +4 | xargs -r docker rmi || true
                     done
                 '''
             }
@@ -110,8 +98,8 @@ pipeline {
                  body: "Your Dual App Build & Deploy failed. Please check Jenkins logs."
         }
         always {
-            // Clean workspace to prevent disk space issues
-            cleanWs()
+            // Clean workspace using deleteDir instead of cleanWs
+            deleteDir()
         }
     }
 }
