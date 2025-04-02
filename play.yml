@@ -1,15 +1,34 @@
 ---
 - name: Setup and Deploy Dual App to Shared Host
-  hosts: appserver
+  hosts: app
   become: yes
-  vars:
-    db_name: sharedappdb
-    db_user: devops
-    db_pass: admin123
-
+  
+  pre_tasks:
+    - name: Install essential packages
+      package:
+        name:
+          - python3-pip
+          - python3-docker
+        state: present
+        
+    - name: Install Docker
+      package:
+        name: docker
+        state: present
+        
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+        
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_ssh_user }}"
+        groups: docker
+        append: yes
+      
   roles:
     - postgresql
     - flask_app
     - node_app
-
-

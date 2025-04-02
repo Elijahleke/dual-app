@@ -7,7 +7,6 @@
     build:
       path: /home/fedora/dual-app/node_app
     docker_host: "unix://var/run/docker.sock"
-  become: true
 
 - name: Run Node container
   community.docker.docker_container:
@@ -18,4 +17,3 @@
     published_ports:
       - "3000:3000"
     docker_host: "unix://var/run/docker.sock"
-  become: true
