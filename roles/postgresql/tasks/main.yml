@@ -20,9 +20,8 @@
 - name: Create the database 'sharedappdb' if it doesn't exist
   become: true
   become_user: postgres
-  postgresql_db:
-    name: sharedappdb
-    state: present
+  shell: |
+    psql -tc "SELECT 1 FROM pg_database WHERE datname = 'sharedappdb'" | grep -q 1 || createdb sharedappdb
 
 - name: Copy DB schema to remote
   copy:
