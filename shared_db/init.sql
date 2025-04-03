@@ -1,5 +1,5 @@
--- CREATE DATABASE sharedappdb;
--- \c sharedappdb;
+CREATE DATABASE sharedappdb;
+\c sharedappdb;
 
 -- Create 'devs' table if it doesn't exist
 CREATE TABLE IF NOT EXISTS devs (
