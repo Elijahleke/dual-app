@@ -3,10 +3,10 @@ const { Pool } = require('pg');
 const app = express();
 
 const pool = new Pool({
-  host: 'localhost',
-  user: 'devops',
-  password: 'password',
-  database: 'sharedappdb'
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASS,
+  database: process.env.DB_NAME
 });
 
 app.get('/', async (req, res) => {
