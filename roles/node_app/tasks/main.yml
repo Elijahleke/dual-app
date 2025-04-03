@@ -7,7 +7,7 @@
 
 - name: Download Node image artifact from Nexus
   get_url:
-    url: "http://34.227.49.233:8081/repository/dual-app-artifacts/node_app-{{ version }}.tar.gz"
+    url: "http://54.90.132.154:8081/repository/dual-app-artifacts/node_app-{{ version }}.tar.gz"
     dest: "/tmp/node_app-{{ version }}.tar.gz"
     mode: '0644'
     url_username: "{{ nexus_user }}"

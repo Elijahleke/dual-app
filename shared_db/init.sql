@@ -1,9 +1,17 @@
+-- Create the database
 CREATE DATABASE sharedappdb;
 \c sharedappdb;
 
-CREATE TABLE devs (
+-- Create the table if it doesn't exist
+CREATE TABLE IF NOT EXISTS devs (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(50)
+  name VARCHAR(50) UNIQUE
 );
 
-INSERT INTO devs (name) VALUES ('Flask Developer'), ('Node Developer'), ('Shared DB User');
+-- Insert team members with protection from duplication
+INSERT INTO devs (name)
+VALUES 
+  ('Elijah Adeleke (Team Lead)'),
+  ('Debora Boyo'),
+  ('Precious Chukwudi')
+ON CONFLICT (name) DO NOTHING;
