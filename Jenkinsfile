@@ -63,7 +63,7 @@ pipeline {
 
         stage('Cleanup Old Artifacts') {
             steps {
-                sh 'find ./ -name "*.tar.gz" -mtime +7 -delete'
+                sh 'find ./ -name "*.tar.gz" -mtime +2 -delete'
             }
         }
     }
