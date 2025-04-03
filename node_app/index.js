@@ -15,4 +15,4 @@ app.get('/', async (req, res) => {
   res.send(`<h1>Node.js app with shared DB is up and running!</h1><ul>${names}</ul>`);
 });
 
-app.listen(3000, () => console.log('Node.js app listening on port 3000'));
+app.listen(3000, '0.0.0.0', () => console.log('Node.js app listening on port 3000'));
