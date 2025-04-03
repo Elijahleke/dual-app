@@ -1,0 +1,33 @@
+- name: Check if PostgreSQL is initialized
+  stat:
+    path: /var/lib/pgsql/data/PG_VERSION
+  register: pgdata_initialized
+  become: yes
+
+- name: Initialize PostgreSQL database if not already initialized
+  command: postgresql-setup --initdb
+  become: yes
+  when: not pgdata_initialized.stat.exists
+
+- name: Start and enable PostgreSQL service
+  service:
+    name: postgresql
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Create the database 'sharedappdb' if it doesn't exist
+  become: yes
+  shell: |
+    sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = 'sharedappdb'" | grep -q 1 || sudo -u postgres createdb sharedappdb
+
+- name: Copy DB schema to remote
+  copy:
+    src: shared_db/init.sql
+    dest: /tmp/init.sql
+  become: yes
+
+- name: Load schema into sharedappdb
+  become: yes
+  shell: |
+    sudo -u postgres psql -d sharedappdb -f /tmp/init.sql
