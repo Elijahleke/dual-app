@@ -71,16 +71,18 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh '''
-                        echo "🔍 Fetching list of .tar.gz files in Nexus..."
+                        echo "Fetching .tar.gz artifact IDs from Nexus..."
 
                         curl -s -u "$NEXUS_USER:$NEXUS_PASS" \
                         "http://54.90.132.154:8081/service/rest/v1/search/assets?repository=dual-app-artifacts" \
-                        | jq -r '.items[] | select(.downloadUrl | endswith(".tar.gz")) | .id' > delete-list.txt
+                        | jq -r '.items[] | select(.downloadUrl | endswith(".tar.gz")) | [.id, .path] | @tsv' \
+                        | sort -t '-' -k3,3V \
+                        | head -n -10 > delete-list.txt
 
-                        echo "🧹 Deleting matching .tar.gz artifacts from Nexus..."
+                        echo "Deleting old artifacts, keeping latest 10..."
 
-                        while read -r id; do
-                            echo "➡️ Deleting asset ID: $id"
+                        while read -r id path; do
+                            echo "Deleting: $path (ID: $id)"
                             curl -s -X DELETE -u "$NEXUS_USER:$NEXUS_PASS" \
                             "http://54.90.132.154:8081/service/rest/v1/assets/$id"
                         done < delete-list.txt
