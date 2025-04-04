@@ -14,6 +14,6 @@ CREATE TABLE devs (
 INSERT INTO devs (name) VALUES 
   ('Elijah Adeleke'), 
   ('Debby Boyo'), 
-  ('Precious')
+  ('Precious Chidera')
 ON CONFLICT (name) DO NOTHING;
 
