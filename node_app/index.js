@@ -20,7 +20,7 @@ app.set('views', path.join(__dirname, 'views'));
 const pool = new Pool({
   host: 'localhost',
   user: 'devops',
-  password: 'admin123',
+  password: 'password',
   database: 'sharedappdb'
 });
 
