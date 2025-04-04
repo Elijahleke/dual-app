@@ -67,26 +67,26 @@ pipeline {
             }
         }
 
-        /*
+        
         stage('Cleanup Old Artifacts from Nexus') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh '''
                         cleanup_artifacts() {
                             APP_NAME=$1
-                            echo "🔍 Fetching $APP_NAME .tar.gz artifacts from Nexus..."
+                            echo "Fetching $APP_NAME .tar.gz artifacts from Nexus..."
 
                             curl -s -u "$NEXUS_USER:$NEXUS_PASS" \
                             "http://54.90.132.154:8081/service/rest/v1/search/assets?repository=dual-app-artifacts" \
                             | jq -r --arg app "$APP_NAME" '.items[] | select(.downloadUrl | endswith(".tar.gz")) | select(.path | startswith($app)) | [.id, .path] | @tsv' \
                             | sort -t '-' -k3,3V \
-                            | tail -n +6 \
+                            | tail -n +4 \
                             | cut -f1 > delete-${APP_NAME}.txt
 
                             echo "Deleting old $APP_NAME artifacts (keeping latest 5)..."
 
                             while read -r id; do
-                                echo "➡️ Deleting asset ID: $id"
+                                echo "Deleting asset ID: $id"
                                 curl -s -X DELETE -u "$NEXUS_USER:$NEXUS_PASS" \
                                 "http://54.90.132.154:8081/service/rest/v1/assets/$id"
                             done < delete-${APP_NAME}.txt
@@ -97,7 +97,7 @@ pipeline {
                     '''
                 }
             }
-        }*/
+        }
     }
 
     post {
