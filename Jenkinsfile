@@ -68,6 +68,29 @@ pipeline {
         }
     }
 
+        stage('Cleanup Old Artifacts from Nexus') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
+                    sh '''
+                echo "Fetching list of .tar.gz files in Nexus..."
+
+                curl -s -u "$NEXUS_USER:$NEXUS_PASS" \
+                "http://54.90.132.154:8081/service/rest/v1/search/assets?repository=dual-app-artifacts" \
+                | jq -r '.items[] | select(.downloadUrl | endswith(".tar.gz")) | .id' > delete-list.txt
+
+                echo " Deleting matching .tar.gz artifacts from Nexus..."
+
+                while read -r id; do
+                    echo " Deleting asset ID: $id"
+                    curl -s -X DELETE -u "$NEXUS_USER:$NEXUS_PASS" \
+                    "http://54.90.132.154:8081/service/rest/v1/assets/$id"
+                done < delete-list.txt
+            '''
+        }
+    }
+}
+
+
     post {
         success {
             mail to: 'elijahleked@gmail.com, boyodebby@gmail.com, derachukwudi08@gmail.com',
