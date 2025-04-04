@@ -1,0 +1,96 @@
+---
+# tasks file for monitoring
+---
+- name: Download Node Exporter
+  get_url:
+    url: https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+    dest: /tmp/node_exporter.tar.gz
+
+- name: Extract Node Exporter
+  unarchive:
+    src: /tmp/node_exporter.tar.gz
+    dest: /opt/
+    remote_src: yes
+
+- name: Move Node Exporter binary
+  copy:
+    remote_src: yes
+    src: /opt/node_exporter-1.7.0.linux-amd64/node_exporter
+    dest: /usr/local/bin/node_exporter
+    mode: '0755'
+
+- name: Create systemd service for Node Exporter
+  copy:
+    dest: /etc/systemd/system/node_exporter.service
+    content: |
+      [Unit]
+      Description=Node Exporter
+      After=network.target
+
+      [Service]
+      ExecStart=/usr/local/bin/node_exporter
+
+      [Install]
+      WantedBy=default.target
+
+- name: Start and enable Node Exporter
+  systemd:
+    name: node_exporter
+    enabled: yes
+    state: started
+
+- name: Install Prometheus
+  block:
+    - name: Download Prometheus
+      get_url:
+        url: https://github.com/prometheus/prometheus/releases/download/v2.51.2/prometheus-2.51.2.linux-amd64.tar.gz
+        dest: /tmp/prometheus.tar.gz
+
+    - name: Extract Prometheus
+      unarchive:
+        src: /tmp/prometheus.tar.gz
+        dest: /opt/
+        remote_src: yes
+
+    - name: Move Prometheus binaries
+      copy:
+        remote_src: yes
+        src: /opt/prometheus-2.51.2.linux-amd64/prometheus
+        dest: /usr/local/bin/prometheus
+        mode: '0755'
+
+    - name: Move Promtool
+      copy:
+        remote_src: yes
+        src: /opt/prometheus-2.51.2.linux-amd64/promtool
+        dest: /usr/local/bin/promtool
+        mode: '0755'
+
+    - name: Copy Prometheus config
+      template:
+        src: prometheus.yml.j2
+        dest: /etc/prometheus.yml
+
+    - name: Create systemd service for Prometheus
+      copy:
+        dest: /etc/systemd/system/prometheus.service
+        content: |
+          [Unit]
+          Description=Prometheus
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          ExecStart=/usr/local/bin/prometheus --config.file=/etc/prometheus.yml
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Start and enable Prometheus
+      systemd:
+        name: prometheus
+        enabled: yes
+        state: started
+
+
