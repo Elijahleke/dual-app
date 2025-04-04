@@ -71,21 +71,28 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh '''
-                        echo "Fetching .tar.gz artifact IDs from Nexus..."
+                        cleanup_artifacts() {
+                            APP_NAME=$1
+                            echo "Fetching $APP_NAME .tar.gz artifacts from Nexus..."
 
-                        curl -s -u "$NEXUS_USER:$NEXUS_PASS" \
-                        "http://54.90.132.154:8081/service/rest/v1/search/assets?repository=dual-app-artifacts" \
-                        | jq -r '.items[] | select(.downloadUrl | endswith(".tar.gz")) | [.id, .path] | @tsv' \
-                        | sort -t '-' -k3,3V \
-                        | head -n -10 > delete-list.txt
+                            curl -s -u "$NEXUS_USER:$NEXUS_PASS" \
+                            "http://54.90.132.154:8081/service/rest/v1/search/assets?repository=dual-app-artifacts" \
+                            | jq -r --arg app "$APP_NAME" '.items[] | select(.downloadUrl | endswith(".tar.gz")) | select(.path | startswith($app)) | [.id, .path] | @tsv' \
+                            | sort -t '-' -k3,3V \
+                            | head -n -10 > delete-${APP_NAME}.txt
 
-                        echo "Deleting old artifacts, keeping latest 10..."
+                            echo "Deleting old $APP_NAME artifacts..."
 
-                        while read -r id path; do
-                            echo "Deleting: $path (ID: $id)"
-                            curl -s -X DELETE -u "$NEXUS_USER:$NEXUS_PASS" \
-                            "http://54.90.132.154:8081/service/rest/v1/assets/$id"
-                        done < delete-list.txt
+                            while read -r id path; do
+                                echo "Deleting: $path (ID: $id)"
+                                curl -s -X DELETE -u "$NEXUS_USER:$NEXUS_PASS" \
+                                "http://54.90.132.154:8081/service/rest/v1/assets/$id"
+                            done < delete-${APP_NAME}.txt
+                        }
+
+                        # Clean both apps
+                        cleanup_artifacts flask_app
+                        cleanup_artifacts node_app
                     '''
                 }
             }
