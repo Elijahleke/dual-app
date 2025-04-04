@@ -67,6 +67,7 @@ pipeline {
             }
         }
 
+        /*
         stage('Cleanup Old Artifacts from Nexus') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
@@ -96,7 +97,7 @@ pipeline {
                     '''
                 }
             }
-        }
+        }*/
     }
 
     post {
