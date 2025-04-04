@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         GIT_REPO = 'https://github.com/Elijahleke/dual-app.git'
-        VERSION = "v1.0.${BUILD_NUMBER}"
+        VERSION = "v2.0.${BUILD_NUMBER}"
         NEXUS_REPO = "http://172.31.26.135:8081/repository/dual-app-artifacts"
     }
 
