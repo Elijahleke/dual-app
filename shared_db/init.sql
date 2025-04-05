@@ -10,9 +10,9 @@ CREATE TABLE devs (
   name VARCHAR(50) UNIQUE
 );
 
--- Clean insert of new values
+-- Clean insert of new values 
 INSERT INTO devs (name) VALUES 
-  ('Elijah Adeleke'), 
+  ('Elijah Adeleke (TL)'), 
   ('Debby Boyo'), 
   ('Precious Chidera')
 ON CONFLICT (name) DO NOTHING;
