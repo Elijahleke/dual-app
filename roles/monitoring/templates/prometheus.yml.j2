@@ -5,3 +5,21 @@ scrape_configs:
   - job_name: 'node_exporter'
     static_configs:
       - targets: ['172.31.90.68:9100']
+        labels:
+          instance: 'app_server'
+
+      - targets: ['172.31.26.135:9100']
+        labels:
+          instance: 'jenkins_agent'
+
+  - job_name: 'flask_app'
+    static_configs:
+      - targets: ['172.31.90.68:5000']
+        labels:
+          instance: 'flask_app'
+
+  - job_name: 'node_app'
+    static_configs:
+      - targets: ['172.31.90.68:3000']
+        labels:
+          instance: 'node_app'
