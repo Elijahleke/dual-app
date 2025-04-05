@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'ubuntu-agent' }
+    agent { label 'dev' }
 
     environment {
         GIT_REPO = 'https://github.com/Elijahleke/dual-app.git'
