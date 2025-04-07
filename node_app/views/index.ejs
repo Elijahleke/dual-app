@@ -3,12 +3,27 @@
 <head>
   <title>Node.js Shared DB</title>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #fff3cd; padding: 40px; color: #333;">
-  <h1 style="color: #28a745;">Node.js app with shared DB is up and running!</h1>
-  <ul style="padding-left: 20px; list-style-type: square;">
-    <% names.forEach(name => { %>
-      <li style="font-size: 18px; margin-bottom: 8px;"><%= name %></li>
-    <% }) %>
-  </ul>
+<body style="
+  font-family: Arial, sans-serif;
+  background-image: url('bg.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  padding: 60px;
+  color: #fff;
+  text-align: center;
+">
+
+  <div style="background-color: rgba(0, 0, 0, 0.6); padding: 40px; border-radius: 10px; display: inline-block;">
+    <h1 style="color: #28a745; font-size: 36px; margin-bottom: 30px;">
+      Node.js App with Shared DB is Up and Running!
+    </h1>
+    <ul style="list-style-type: square; text-align: left; display: inline-block; padding-left: 20px;">
+      <% names.forEach(name => { %>
+        <li style="font-size: 20px; margin-bottom: 10px;"><%= name %></li>
+      <% }) %>
+    </ul>
+  </div>
+
 </body>
 </html>
