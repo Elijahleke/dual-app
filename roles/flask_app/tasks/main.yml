@@ -1,0 +1,47 @@
+---
+- name: Create extract directory for Flask image
+  file:
+    path: "/tmp/flask_app"
+    state: directory
+    mode: '0755'
+
+- name: Download Flask image artifact from Nexus
+  get_url:
+    url: "http://54.90.132.154:8081/repository/dual-app-artifacts/flask_app-{{ version }}.tar.gz"
+    dest: "/tmp/flask_app-{{ version }}.tar.gz"
+    mode: '0644'
+    url_username: "{{ nexus_user }}"
+    url_password: "{{ nexus_pass }}"
+
+- name: Extract Flask image archive
+  unarchive:
+    src: "/tmp/flask_app-{{ version }}.tar.gz"
+    dest: "/tmp/flask_app"
+    remote_src: yes
+
+- name: Build Flask image from extracted files
+  command: docker build -t flask_app:{{ version }} .
+  args:
+    chdir: /tmp/flask_app/flask_app
+  become: yes
+  become_user: fedora
+
+- name: Stop & remove old Flask container (if exists)
+  shell: docker rm -f flask_app || true
+  ignore_errors: true
+  become: yes
+  become_user: fedora
+
+- name: Run Flask container using Docker CLI
+  shell: >
+    docker run -d --name flask_app
+    --restart always
+    --network host
+    -e DB_HOST=127.0.0.1
+    -e DB_NAME=sharedappdb
+    -e DB_USER=devops
+    -e DB_PASS=admin123
+    flask_app:{{ version }}
+  become: yes
+  become_user: fedora
+

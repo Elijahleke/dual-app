@@ -1,0 +1,7 @@
+---
+- name: Setup Monitoring
+  hosts: monitoring
+  become: yes
+  roles:
+    - monitoring
+

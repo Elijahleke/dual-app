@@ -1,0 +1,34 @@
+---
+- name: Setup and Deploy Dual App to Shared Host
+  hosts: app
+  become: yes
+
+  vars:
+    version: "v1.0.{{ lookup('env', 'BUILD_NUMBER') | default('latest') }}"
+    nexus_user: "{{ lookup('env', 'NEXUS_USER') }}"
+    nexus_pass: "{{ lookup('env', 'NEXUS_PASS') }}"
+
+  environment:
+    DOCKER_HOST: unix:///var/run/docker.sock
+
+  pre_tasks:
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add SSH user to Docker group (non-fatal if already added)
+      user:
+        name: "{{ ansible_ssh_user }}"
+        groups: docker
+        append: yes
+      ignore_errors: true
+
+    - name: Reset SSH connection to apply docker group changes
+      meta: reset_connection
+
+  roles:
+    - postgresql
+    - flask_app
+    - node_app
