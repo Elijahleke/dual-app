@@ -4,7 +4,7 @@
   become: yes
 
   vars:
-    version: "v1.0.{{ lookup('env', 'BUILD_NUMBER') | default('latest') }}"
+    version: "v2.0.{{ lookup('env', 'BUILD_NUMBER') | default('latest') }}"
     nexus_user: "{{ lookup('env', 'NEXUS_USER') }}"
     nexus_pass: "{{ lookup('env', 'NEXUS_PASS') }}"
 
