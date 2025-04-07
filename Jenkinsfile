@@ -49,7 +49,7 @@ pipeline {
             }
         }
 
-        stage('Deploy via Ansible') {
+        stage('Deploy via Ansible') 
             steps {
                 withCredentials([usernamePassword(credentialsId: 'Nexus', usernameVariable: 'NEXUS_USER', passwordVariable: 'NEXUS_PASS')]) {
                     sh '''
